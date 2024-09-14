@@ -16,7 +16,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = '1.8'
     }
 
     defaultConfig {
@@ -24,10 +24,9 @@ android {
         minSdkVersion 23
         targetSdk 34
         versionCode 1
-        // Version de la aplicacion
-        versionName  "1.4.3"
+        versionName "1.4.3"
     }
-    
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -39,4 +38,17 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// Forzar una versión específica de Kotlin
+configurations.all {
+    resolutionStrategy {
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+    }
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
 }

@@ -1,18 +1,87 @@
 import 'package:flutter/material.dart';
-import 'package:loading_indicator/loading_indicator.dart'; // Paquete para el indicador de carga
+import 'package:loading_indicator/loading_indicator.dart';
+import 'package:tcp/widgets/showSnackbar.dart';
+import 'package:tcp/widgets/widgets.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   static const String routeName = '/login';
 
   const LoginPage({super.key});
 
   @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _showProgress = false;
+  bool _mostrarContra = true;
+  String? _currentUserId;
+
+  Future<void> _signInWithEmailAndPassword() async {
+    setState(() {
+      _showProgress = true;
+    });
+
+    if (_formKey.currentState!.validate()) {
+      try {
+        final UserCredential userCredential =
+            await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+        if (userCredential.user != null) {
+          setState(() {});
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage;
+        switch (e.code) {
+          case 'wrong-password':
+            errorMessage = 'La contraseña es incorrecta';
+            break;
+          case 'user-not-found':
+            errorMessage =
+                'No se encontró una cuenta con este correo electrónico';
+            break;
+          case 'too-many-requests':
+            errorMessage =
+                'Demasiados intentos de inicio de sesión. Por favor intenta nuevamente más tarde.';
+            break;
+          case 'network-request-failed':
+            SnackNoConexion(context,
+                'Error de red. Por favor verifica tu conexión a Internet.');
+            return;
+          default:
+            errorMessage =
+                'Error al iniciar sesión. Por favor intenta nuevamente.';
+        }
+        showSnackBar(errorMessage);
+      } catch (e) {
+        showSnackBar('Error al iniciar sesión. Por favor intenta nuevamente.');
+      }
+    }
+
+    setState(() {
+      _showProgress = false;
+    });
+  }
+
+  void showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
-    bool _isPasswordObscure = true; // Controla la visibilidad de la contraseña
-    bool _showProgress =
-        false; // Controla la visibilidad del indicador de carga
-    bool _isConnected = true; // Simula el estado de conectividad
+    const Color colorPrincipal = Color.fromARGB(255, 1, 31, 10);
 
     return Stack(
       children: [
@@ -22,7 +91,7 @@ class LoginPage extends StatelessWidget {
               height: screenSize.height,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color.fromARGB(255, 4, 56, 99), Colors.blue],
+                  colors: [colorPrincipal, Colors.green],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -30,12 +99,12 @@ class LoginPage extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Form(
+                  key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       SizedBox(height: screenSize.height * 0.1),
-                      // Logo o imagen en la parte superior
                       const Center(
                         child: CircleAvatar(
                           radius: 50,
@@ -57,110 +126,22 @@ class LoginPage extends StatelessWidget {
                             fontSize: 24.0,
                             fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(
-                        height: 20.0,
-                      ),
-                      // Campo de correo electrónico
-                      TextFormField(
-                        decoration: InputDecoration(
-                          prefixIcon:
-                              const Icon(Icons.email, color: Colors.white),
-                          labelText: 'Correo electrónico',
-                          labelStyle: const TextStyle(color: Colors.white),
-                          filled: true,
-                          fillColor: Colors.white24,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                      ),
                       const SizedBox(height: 20.0),
-                      // Campo de contraseña
-                      StatefulBuilder(
-                        builder: (context, setState) => TextFormField(
-                          obscureText: _isPasswordObscure,
-                          decoration: InputDecoration(
-                            prefixIcon:
-                                const Icon(Icons.lock, color: Colors.white),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _isPasswordObscure
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.white,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isPasswordObscure = !_isPasswordObscure;
-                                });
-                              },
-                            ),
-                            labelText: 'Contraseña',
-                            labelStyle: const TextStyle(color: Colors.white),
-                            filled: true,
-                            fillColor: Colors.white24,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
+                      Login()
+                          .txtCorreoElectronico(controller: _emailController),
+                      const SizedBox(height: 20.0),
+                      Login().txtContra(_mostrarContra, (value) {
+                        setState(() {
+                          _mostrarContra = value;
+                        });
+                      }, controller: _passwordController),
                       const SizedBox(height: 30.0),
-                      // Botón de inicio de sesión
                       ElevatedButton(
-                        onPressed: (_isConnected && !_showProgress)
-                            ? () {
-                                // Acción de inicio de sesión simulada
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: const Color.fromARGB(255, 4, 56, 99),
-                          backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        ),
-                        child: const Text(
-                          'Iniciar Sesión',
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 4, 56, 99),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20.0),
-                      // Enlaces de "Crear una cuenta" y "Olvidar contraseña"
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(context, "/registro");
-                            },
-                            child: const Text(
-                              'Crear una cuenta',
-                              style: TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 20),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(context, "/olvidar_contra");
-                            },
-                            child: const Text(
-                              'Se me olvidó la contraseña',
-                              style: TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
+                        onPressed:
+                            _showProgress ? null : _signInWithEmailAndPassword,
+                        child: Text(_showProgress
+                            ? 'Iniciando sesión...'
+                            : 'Iniciar Sesión'),
                       ),
                     ],
                   ),
@@ -169,7 +150,6 @@ class LoginPage extends StatelessWidget {
             ),
           ),
         ),
-        // Indicador de carga
         if (_showProgress)
           Container(
             color: Colors.black.withOpacity(0.5),
@@ -186,5 +166,12 @@ class LoginPage extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

@@ -50,26 +50,6 @@ void MostrarSnackBar3(BuildContext context, String message,
   );
 }
 
-void MostrarSnackBarAccion(BuildContext context, String message,
-    {Color backgroundColor = Colors.blue}) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        message,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSecondaryContainer,
-        ),
-      ),
-      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-      elevation: 10.0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      behavior: SnackBarBehavior.floating,
-    ),
-  );
-}
-
 void SnackNoConexion(BuildContext context, String mensaje) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(

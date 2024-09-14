@@ -12,18 +12,21 @@ import 'package:tcp/main.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    // Define un color principal para la prueba
+    const Color colorPrincipal = Color.fromARGB(255, 1, 31, 10);
 
-    // Verify that our counter starts at 0.
+    // Construye la app y pasa el colorPrincipal
+    await tester.pumpWidget(const MyApp(colorPrincipal: colorPrincipal));
+
+    // Verifica que el contador empiece en 0.
     expect(find.text('0'), findsOneWidget);
     expect(find.text('1'), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
+    // Simula un toque en el icono '+' y actualiza el widget.
     await tester.tap(find.byIcon(Icons.add));
     await tester.pump();
 
-    // Verify that our counter has incremented.
+    // Verifica que el contador ha incrementado.
     expect(find.text('0'), findsNothing);
     expect(find.text('1'), findsOneWidget);
   });
