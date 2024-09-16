@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:tcp/pages/validator/validator.dart';
 
 const Color colorPrincipal = Color.fromARGB(255, 1, 31, 10);
@@ -301,6 +302,23 @@ class Register {
         ),
       ),
       validator: validator,
+    );
+  }
+}
+
+class SinConexion {
+  static void mostrarDialogo(BuildContext context, VoidCallback onRetry) {
+    PanaraInfoDialog.show(
+      context,
+      title: "Sin conexión a Internet",
+      message: "No tienes conexión a Internet. ¿Quieres reintentar?",
+      buttonText: "Reintentar",
+      onTapDismiss: () {
+        Navigator.of(context).pop();
+        onRetry(); // Llamada a la función para reintentar la conexión
+      },
+      panaraDialogType: PanaraDialogType.error,
+      barrierDismissible: false,
     );
   }
 }

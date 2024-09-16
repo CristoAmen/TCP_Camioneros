@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:loading_indicator/loading_indicator.dart';
+import 'package:tcp/pages/validator/validator.dart';
 import 'package:tcp/widgets/showSnackbar.dart';
 import 'package:tcp/widgets/widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,59 +24,70 @@ class _LoginPageState extends State<LoginPage> {
   bool _mostrarContra = true;
   String? _currentUserId;
 
-  Future<void> _signInWithEmailAndPassword() async {
-    setState(() {
-      _showProgress = true;
-    });
-
-    if (_formKey.currentState!.validate()) {
-      try {
-        final UserCredential userCredential =
-            await _auth.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-        if (userCredential.user != null) {
-          setState(() {});
-          Navigator.of(context).pushReplacementNamed('/home');
-        }
-      } on FirebaseAuthException catch (e) {
-        String errorMessage;
-        switch (e.code) {
-          case 'wrong-password':
-            errorMessage = 'La contraseña es incorrecta';
-            break;
-          case 'user-not-found':
-            errorMessage =
-                'No se encontró una cuenta con este correo electrónico';
-            break;
-          case 'too-many-requests':
-            errorMessage =
-                'Demasiados intentos de inicio de sesión. Por favor intenta nuevamente más tarde.';
-            break;
-          case 'network-request-failed':
-            SnackNoConexion(context,
-                'Error de red. Por favor verifica tu conexión a Internet.');
-            return;
-          default:
-            errorMessage =
-                'Error al iniciar sesión. Por favor intenta nuevamente.';
-        }
-        showSnackBar(errorMessage);
-      } catch (e) {
-        showSnackBar('Error al iniciar sesión. Por favor intenta nuevamente.');
-      }
-    }
-
-    setState(() {
-      _showProgress = false;
-    });
-  }
-
   void showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _signInWithEmailAndPassword() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _showProgress = true;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    try {
+      final UserCredential userCredential =
+          await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (userCredential.user != null) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'invalid-email':
+          errorMessage = 'El formato del correo electrónico no es válido.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'Esta cuenta de usuario ha sido deshabilitada.';
+          break;
+        case 'user-not-found':
+          errorMessage =
+              'No se encontró ningún usuario con este correo electrónico.';
+          break;
+        case 'wrong-password':
+          errorMessage = 'La contraseña es incorrecta.';
+          break;
+        case 'too-many-requests':
+          errorMessage =
+              'Demasiados intentos fallidos. Por favor, intente más tarde.';
+          break;
+        case 'network-request-failed':
+          errorMessage = 'Error de red. Verifique su conexión a Internet.';
+          break;
+        default:
+          errorMessage =
+              'Ocurrió un error durante el inicio de sesión: ${e.message}';
+      }
+      showSnackBar(errorMessage);
+    } catch (e) {
+      showSnackBar(
+          'Ocurrió un error inesperado. Por favor, intente nuevamente.');
+    } finally {
+      setState(() {
+        _showProgress = false;
+      });
+    }
   }
 
   @override
@@ -111,9 +123,8 @@ class _LoginPageState extends State<LoginPage> {
                           backgroundColor: Colors.white,
                           child: Text(
                             'TCP',
-                            style: TextStyle(
-                                color: Color.fromARGB(255, 4, 56, 99),
-                                fontSize: 32),
+                            style:
+                                TextStyle(color: colorPrincipal, fontSize: 32),
                           ),
                         ),
                       ),
@@ -127,14 +138,31 @@ class _LoginPageState extends State<LoginPage> {
                             fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 20.0),
-                      Login()
-                          .txtCorreoElectronico(controller: _emailController),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                            labelText: 'Correo Electrónico'),
+                        validator: validaciones.validarCorreo,
+                      ),
                       const SizedBox(height: 20.0),
-                      Login().txtContra(_mostrarContra, (value) {
-                        setState(() {
-                          _mostrarContra = value;
-                        });
-                      }, controller: _passwordController),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Contraseña',
+                          suffixIcon: IconButton(
+                            icon: Icon(_mostrarContra
+                                ? Icons.visibility
+                                : Icons.visibility_off),
+                            onPressed: () {
+                              setState(() {
+                                _mostrarContra = !_mostrarContra;
+                              });
+                            },
+                          ),
+                        ),
+                        obscureText: _mostrarContra,
+                        validator: validaciones.validarContra,
+                      ),
                       const SizedBox(height: 30.0),
                       ElevatedButton(
                         onPressed:
@@ -143,6 +171,13 @@ class _LoginPageState extends State<LoginPage> {
                             ? 'Iniciando sesión...'
                             : 'Iniciar Sesión'),
                       ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pushReplacementNamed('/registro');
+                        },
+                        child: Text('¿No tienes una cuenta? Regístrate'),
+                      )
                     ],
                   ),
                 ),

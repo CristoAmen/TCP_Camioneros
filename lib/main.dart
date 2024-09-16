@@ -6,8 +6,11 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tcp/config/Metodos_Firebase.dart';
 import 'package:tcp/config/firebase_options.dart';
+import 'package:tcp/pages/Home_Page.dart';
 import 'package:tcp/pages/Login_Page.dart';
+import 'package:tcp/pages/Perfil_Page.dart';
 import 'package:tcp/pages/Register_Page.dart';
+import 'package:tcp/pages/splash_screen.dart';
 
 // Instancias de mis archivos
 void main() async {
@@ -85,6 +88,9 @@ class MyApp extends StatelessWidget {
         routes: {
           LoginPage.routeName: (context) => const LoginPage(),
           RegisterPage.routeName: (context) => const RegisterPage(),
+          SplashPage.routeName: (context) => const SplashPage(),
+          HomePage.routeName: (context) => const HomePage(),
+          PerfilPage.routeName: (context) => const PerfilPage()
         },
       ),
     );
@@ -99,9 +105,41 @@ class AuthWrapper extends StatelessWidget {
     final user = Provider.of<User?>(context);
 
     if (user == null) {
-      return const RegisterPage(); // Página de inicio de sesión
+      // Si el usuario no está autenticado, mostrar la página de splash/login
+      return const SplashPage();
     } else {
-      return const RegisterPage(); // Aquí podrías redirigir a una página diferente si el usuario está autenticado
+      // Si el usuario está autenticado, verificamos si existe en Firestore
+      return FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('empleados')
+            .doc(user.uid)
+            .get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+                child:
+                    CircularProgressIndicator()); // Mostrar un indicador de carga
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+                child: Text(
+                    'Ocurrió un error: ${snapshot.error}')); // Mostrar un error si ocurre
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            // Si el documento no existe, redirigir a la página de inicio de sesión
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(context).pushReplacementNamed(LoginPage.routeName);
+            });
+            return const SizedBox
+                .shrink(); // No mostrar nada mientras se redirige
+          }
+
+          // Si el documento existe, redirigir a la página de inicio
+          return const HomePage(); // Puedes cambiar a la página deseada
+        },
+      );
     }
   }
 }

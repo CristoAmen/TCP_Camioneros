@@ -1,5 +1,3 @@
-// ignore_for_file: library_private_types_in_public_api
-
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
@@ -13,34 +11,35 @@ class ConnectionStatusWidget extends StatefulWidget {
 }
 
 class _ConnectionStatusWidgetState extends State<ConnectionStatusWidget> {
-  late Stream<ConnectivityResult> _connectivityStream;
+  late Stream<List<ConnectivityResult>> _connectivityStream;
   bool _isConnected = true;
   bool _isUnstable = false;
 
   @override
   void initState() {
     super.initState();
-    _connectivityStream =
-        Connectivity().onConnectivityChanged as Stream<ConnectivityResult>;
+    _connectivityStream = Connectivity().onConnectivityChanged;
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder<List<ConnectivityResult>>(
       stream: _connectivityStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.active) {
-          if (snapshot.data == ConnectivityResult.none) {
-            _isConnected = false;
-            _isUnstable = false; // Sin conexión
-          } else if (snapshot.data == ConnectivityResult.mobile ||
-              snapshot.data == ConnectivityResult.wifi) {
-            _isConnected = true;
-            _isUnstable = false; // Conexión estable
-          } else {
-            _isConnected = true;
-            _isUnstable =
-                true; // Aquí puedes añadir lógica adicional si es necesario
+          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            var connectivityResult = snapshot.data!.first;
+            if (connectivityResult == ConnectivityResult.none) {
+              _isConnected = false;
+              _isUnstable = false; // Sin conexión
+            } else if (connectivityResult == ConnectivityResult.mobile ||
+                connectivityResult == ConnectivityResult.wifi) {
+              _isConnected = true;
+              _isUnstable = false; // Conexión estable
+            } else {
+              _isConnected = true;
+              _isUnstable = true; // Conexión inestable
+            }
           }
         }
 

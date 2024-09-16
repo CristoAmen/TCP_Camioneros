@@ -5,8 +5,8 @@ class validaciones {
       return 'Por favor, ingresa un correo electrónico';
     }
 
-    // Expresión regular para validar el formato del correo electrónico
-    const emailRegex = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
+    // Expresión regular mejorada para validar el formato del correo electrónico
+    const emailRegex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
     if (!RegExp(emailRegex).hasMatch(email)) {
       return 'Por favor, ingresa un correo válido';
     }
@@ -41,8 +41,8 @@ class validaciones {
       return 'Por favor, ingresa un nombre';
     }
 
-    // Verificar que el nombre solo contenga letras y espacios
-    const nombreRegex = r'^[a-zA-Z\s]+$';
+    // Verificar que el nombre solo contenga letras y espacios, incluyendo caracteres acentuados
+    const nombreRegex = r'^[a-zA-ZÀ-ÿ\s]+$';
     if (!RegExp(nombreRegex).hasMatch(nombre)) {
       return 'El nombre solo puede contener letras y espacios';
     }
@@ -56,8 +56,8 @@ class validaciones {
       return 'Por favor, ingresa un apellido';
     }
 
-    // Verificar que el apellido solo contenga letras y espacios
-    const apellidoRegex = r'^[a-zA-Z\s]+$';
+    // Verificar que el apellido solo contenga letras y espacios, incluyendo caracteres acentuados
+    const apellidoRegex = r'^[a-zA-ZÀ-ÿ\s]+$';
     if (!RegExp(apellidoRegex).hasMatch(apellido)) {
       return 'El apellido solo puede contener letras y espacios';
     }

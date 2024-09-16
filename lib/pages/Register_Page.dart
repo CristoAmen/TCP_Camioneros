@@ -9,7 +9,7 @@ import 'package:tcp/widgets/widgets.dart';
 class RegisterPage extends StatefulWidget {
   static const String routeName = '/registro';
 
-  const RegisterPage({Key? key}) : super(key: key);
+  const RegisterPage({super.key});
 
   @override
   _RegisterPageState createState() => _RegisterPageState();
@@ -28,7 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final PageController _pageController = PageController();
   bool _isPasswordObscure = true;
   bool _isPasswordObscureRepeat = true;
-  bool _acceptTerms = false;
+  final bool _acceptTerms = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -63,14 +63,17 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _registerWithEmailAndPassword() async {
+    // Validación del formulario
     if (!_formKey.currentState!.validate()) return;
 
+    // Comprobación de contraseñas
     if (_passwordController.text != _repeatPasswordController.text) {
       _showSnackBar(
           'Las contraseñas no coinciden. Por favor intenta nuevamente.');
       return;
     }
 
+    // Comprobación de correos electrónicos
     if (_emailController.text != _repeatEmailController.text) {
       _showSnackBar(
           'Los correos electrónicos no coinciden. Por favor intenta nuevamente.');
@@ -82,25 +85,29 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
+      // Registro de usuario con email y contraseña
       final UserCredential userCredential =
           await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      await _firestore
-          .collection('empleados')
-          .doc(userCredential.user!.uid)
-          .set({
+      // Obtener el UID del usuario recién registrado
+      final String uid = userCredential.user!.uid;
+
+      // Guardar datos del empleado en Firestore, incluyendo el UID
+      await _firestore.collection('empleados').doc(uid).set({
+        'id': uid,
         'nombres': _nombreController.text.trim(),
         'materno': _maternoController.text.trim(),
         'paterno': _paternoController.text.trim(),
         'correo': _emailController.text.trim(),
-        'rol': 'choffer',
+        'isActive': null,
+        'rol': 'choffer'
       });
 
       _clearControllers();
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
       print('Error al registrarse: ${e.toString()}');
       _showSnackBar('Error al registrarse: ${e.toString()}');
