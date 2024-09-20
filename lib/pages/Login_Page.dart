@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:loading_indicator/loading_indicator.dart';
 import 'package:tcp/pages/validator/validator.dart';
-import 'package:tcp/widgets/showSnackbar.dart';
 import 'package:tcp/widgets/widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -20,9 +19,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  bool _showProgress = false;
+  bool _mostrarProgreso = false;
   bool _mostrarContra = true;
-  String? _currentUserId;
 
   void showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -30,13 +28,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _signInWithEmailAndPassword() async {
+  Future<void> _inicioSesion() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     setState(() {
-      _showProgress = true;
+      _mostrarProgreso = true;
     });
 
     final email = _emailController.text.trim();
@@ -85,22 +83,21 @@ class _LoginPageState extends State<LoginPage> {
           'Ocurrió un error inesperado. Por favor, intente nuevamente.');
     } finally {
       setState(() {
-        _showProgress = false;
+        _mostrarProgreso = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Size screenSize = MediaQuery.of(context).size;
-    const Color colorPrincipal = Color.fromARGB(255, 1, 31, 10);
+    final Size tamaPantalla = MediaQuery.of(context).size;
 
     return Stack(
       children: [
         Scaffold(
           body: SingleChildScrollView(
             child: Container(
-              height: screenSize.height,
+              height: tamaPantalla.height,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [colorPrincipal, Colors.green],
@@ -116,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      SizedBox(height: screenSize.height * 0.1),
+                      SizedBox(height: tamaPantalla.height * 0.1),
                       const Center(
                         child: CircleAvatar(
                           radius: 50,
@@ -165,9 +162,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 30.0),
                       ElevatedButton(
-                        onPressed:
-                            _showProgress ? null : _signInWithEmailAndPassword,
-                        child: Text(_showProgress
+                        onPressed: _mostrarProgreso ? null : _inicioSesion,
+                        child: Text(_mostrarProgreso
                             ? 'Iniciando sesión...'
                             : 'Iniciar Sesión'),
                       ),
@@ -176,7 +172,7 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.of(context)
                               .pushReplacementNamed('/registro');
                         },
-                        child: Text('¿No tienes una cuenta? Regístrate'),
+                        child: const Text('¿No tienes una cuenta? Regístrate'),
                       )
                     ],
                   ),
@@ -185,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-        if (_showProgress)
+        if (_mostrarProgreso)
           Container(
             color: Colors.black.withOpacity(0.5),
             child: const Center(

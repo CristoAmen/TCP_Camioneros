@@ -8,6 +8,8 @@ import 'package:tcp/config/Metodos_Firebase.dart';
 import 'package:tcp/config/firebase_options.dart';
 import 'package:tcp/pages/Home_Page.dart';
 import 'package:tcp/pages/Login_Page.dart';
+import 'package:tcp/pages/Mapa/Map_Page.dart';
+import 'package:tcp/pages/Mapa/provider.dart';
 import 'package:tcp/pages/Perfil_Page.dart';
 import 'package:tcp/pages/Register_Page.dart';
 import 'package:tcp/pages/splash_screen.dart';
@@ -49,6 +51,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       // Proveedores para la autenticación y el estado de la autenticación
       providers: [
+        ChangeNotifierProvider(
+            create: (_) => ProveedorUsuario()..obtenerDatosUsuario()),
+
         // Proveedor para la clase de métodos de autenticación de Firebase
         Provider<AuthenticationMethods>(
           create: (_) => AuthenticationMethods(
@@ -90,7 +95,8 @@ class MyApp extends StatelessWidget {
           RegisterPage.routeName: (context) => const RegisterPage(),
           SplashPage.routeName: (context) => const SplashPage(),
           HomePage.routeName: (context) => const HomePage(),
-          PerfilPage.routeName: (context) => const PerfilPage()
+          PerfilPage.routeName: (context) => const PerfilPage(),
+          MapPage.routeName: (context) => const MapPage(),
         },
       ),
     );
@@ -137,7 +143,7 @@ class AuthWrapper extends StatelessWidget {
           }
 
           // Si el documento existe, redirigir a la página de inicio
-          return const HomePage(); // Puedes cambiar a la página deseada
+          return const MapPage();
         },
       );
     }

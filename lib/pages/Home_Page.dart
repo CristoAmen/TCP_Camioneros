@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_snake_navigationbar/flutter_snake_navigationbar.dart';
 import 'package:tcp/config/Metodos_Firebase.dart';
+import 'package:tcp/pages/Mapa/Map_Page.dart';
 import 'package:tcp/pages/Perfil_Page.dart';
 import 'package:tcp/widgets/connection_status_widget.dart';
 import 'package:tcp/widgets/widgets.dart';
@@ -26,8 +27,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _isActive = false;
 
   final List<Widget> _screens = [
-    Container(),
-    PerfilPage(),
+    const MapPage(),
+    const PerfilPage(),
     Container(), // Reemplaza este contenedor con la pantalla de Anuncios cuando esté disponible
   ];
 
@@ -152,8 +153,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          const BoxShadow(
+        boxShadow: const [
+          BoxShadow(
             color: Colors.black26,
             blurRadius: 10,
             spreadRadius: 1,

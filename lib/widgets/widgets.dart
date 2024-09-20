@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:panara_dialogs/panara_dialogs.dart';
+import 'package:tcp/pages/Login_Page.dart';
 import 'package:tcp/pages/validator/validator.dart';
 
 const Color colorPrincipal = Color.fromARGB(255, 1, 31, 10);
@@ -316,6 +317,22 @@ class SinConexion {
       onTapDismiss: () {
         Navigator.of(context).pop();
         onRetry(); // Llamada a la función para reintentar la conexión
+      },
+      panaraDialogType: PanaraDialogType.error,
+      barrierDismissible: false,
+    );
+  }
+}
+
+class interacciones {
+  static void errorCuenta(BuildContext context, VoidCallback onRetry) {
+    PanaraInfoDialog.show(
+      context,
+      title: "Hemos tuvido un problema",
+      message: "Posiblemente se elimino tu cuento o haya sido desabilitado",
+      buttonText: "Ir a Login",
+      onTapDismiss: () {
+        Navigator.of(context).pushReplacementNamed(LoginPage.routeName);
       },
       panaraDialogType: PanaraDialogType.error,
       barrierDismissible: false,
