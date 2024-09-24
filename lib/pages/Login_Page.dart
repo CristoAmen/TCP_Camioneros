@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:loading_indicator/loading_indicator.dart';
-import 'package:tcp/pages/validator/validator.dart';
-import 'package:tcp/widgets/widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tcp/widgets/widgets.dart'; // Asumiendo que validaciones está en otro archivo
 
 class LoginPage extends StatefulWidget {
   static const String routeName = '/login';
@@ -21,72 +20,6 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _mostrarProgreso = false;
   bool _mostrarContra = true;
-
-  void showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  Future<void> _inicioSesion() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _mostrarProgreso = true;
-    });
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    try {
-      final UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (userCredential.user != null) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'invalid-email':
-          errorMessage = 'El formato del correo electrónico no es válido.';
-          break;
-        case 'user-disabled':
-          errorMessage = 'Esta cuenta de usuario ha sido deshabilitada.';
-          break;
-        case 'user-not-found':
-          errorMessage =
-              'No se encontró ningún usuario con este correo electrónico.';
-          break;
-        case 'wrong-password':
-          errorMessage = 'La contraseña es incorrecta.';
-          break;
-        case 'too-many-requests':
-          errorMessage =
-              'Demasiados intentos fallidos. Por favor, intente más tarde.';
-          break;
-        case 'network-request-failed':
-          errorMessage = 'Error de red. Verifique su conexión a Internet.';
-          break;
-        default:
-          errorMessage =
-              'Ocurrió un error durante el inicio de sesión: ${e.message}';
-      }
-      showSnackBar(errorMessage);
-    } catch (e) {
-      showSnackBar(
-          'Ocurrió un error inesperado. Por favor, intente nuevamente.');
-    } finally {
-      setState(() {
-        _mostrarProgreso = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,45 +68,31 @@ class _LoginPageState extends State<LoginPage> {
                             fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 20.0),
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                            labelText: 'Correo Electrónico'),
-                        validator: validaciones.validarCorreo,
-                      ),
+                      Login()
+                          .txtCorreoElectronico(controller: _emailController),
                       const SizedBox(height: 20.0),
-                      TextFormField(
+                      PasswordField(
+                        isPasswordObscure: _mostrarContra,
+                        onVisibilityChanged: (bool value) {
+                          setState(() {
+                            _mostrarContra = value;
+                          });
+                        },
                         controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          suffixIcon: IconButton(
-                            icon: Icon(_mostrarContra
-                                ? Icons.visibility
-                                : Icons.visibility_off),
-                            onPressed: () {
-                              setState(() {
-                                _mostrarContra = !_mostrarContra;
-                              });
-                            },
-                          ),
-                        ),
-                        obscureText: _mostrarContra,
-                        validator: validaciones.validarContra,
                       ),
                       const SizedBox(height: 30.0),
-                      ElevatedButton(
-                        onPressed: _mostrarProgreso ? null : _inicioSesion,
-                        child: Text(_mostrarProgreso
-                            ? 'Iniciando sesión...'
-                            : 'Iniciar Sesión'),
+                      Login().btnInicioSesion(
+                        true,
+                        _mostrarProgreso,
+                        _formKey,
+                        _emailController,
+                        _passwordController,
+                        _auth,
+                        context,
+                        () => setState(() => _mostrarProgreso = true),
+                        () => setState(() => _mostrarProgreso = false),
+                        showSnackBar,
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .pushReplacementNamed('/registro');
-                        },
-                        child: const Text('¿No tienes una cuenta? Regístrate'),
-                      )
                     ],
                   ),
                 ),
@@ -196,6 +115,12 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
       ],
+    );
+  }
+
+  void showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 

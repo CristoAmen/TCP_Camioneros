@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:loading_indicator/loading_indicator.dart';
+import 'package:panara_dialogs/panara_dialogs.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:tcp/widgets/widgets.dart';
 
@@ -103,11 +104,13 @@ class _RegisterPageState extends State<RegisterPage> {
         'paterno': _paternoController.text.trim(),
         'correo': _emailController.text.trim(),
         'isActive': null,
-        'rol': 'choffer'
+        'rol': 'choffer',
       });
 
       _clearControllers();
-      Navigator.of(context).pushReplacementNamed('/home');
+
+      // Mostrar el diálogo de éxito
+      _showSuccessDialog();
     } catch (e) {
       print('Error al registrarse: ${e.toString()}');
       _showSnackBar('Error al registrarse: ${e.toString()}');
@@ -116,6 +119,21 @@ class _RegisterPageState extends State<RegisterPage> {
         _showProgress = false;
       });
     }
+  }
+
+  void _showSuccessDialog() {
+    PanaraInfoDialog.show(
+      context,
+      title: "Éxito",
+      message: "Camionero Agregado",
+      buttonText: "Aceptar",
+      onTapDismiss: () {
+        Navigator.of(context).pop(); // Regresa a la ventana anterior
+      },
+      panaraDialogType:
+          PanaraDialogType.normal, // Puedes cambiar a otro tipo si lo deseas
+      barrierDismissible: false,
+    );
   }
 
   void _showSnackBar(String message) {

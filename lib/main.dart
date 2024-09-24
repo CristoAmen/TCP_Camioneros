@@ -13,11 +13,10 @@ import 'package:tcp/pages/Mapa/provider.dart';
 import 'package:tcp/pages/Perfil_Page.dart';
 import 'package:tcp/pages/Register_Page.dart';
 import 'package:tcp/pages/splash_screen.dart';
+import 'package:tcp/widgets/widgets.dart';
 
 // Instancias de mis archivos
 void main() async {
-  const Color colorPrincipal = Color.fromARGB(255, 1, 31, 10);
-
   // Asegúrate de que Flutter esté inicializado
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -114,32 +113,28 @@ class AuthWrapper extends StatelessWidget {
       // Si el usuario no está autenticado, mostrar la página de splash/login
       return const SplashPage();
     } else {
-      // Si el usuario está autenticado, verificamos si existe en Firestore
+      // Usamos un FutureBuilder para verificar la existencia del usuario en Firestore
       return FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
-            .collection('empleados')
-            .doc(user.uid)
-            .get(),
+        future: _obtenerDocumentoEmpleado(user.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-                child:
-                    CircularProgressIndicator()); // Mostrar un indicador de carga
+              child: CircularProgressIndicator(),
+            ); // Mostrar un indicador de carga
           }
 
           if (snapshot.hasError) {
-            return Center(
-                child: Text(
-                    'Ocurrió un error: ${snapshot.error}')); // Mostrar un error si ocurre
+            return const Center(
+              child: Text('Ocurrió un error inesperado.'),
+            ); // Mostrar un mensaje genérico en lugar del error completo
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
             // Si el documento no existe, redirigir a la página de inicio de sesión
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+            Future.microtask(() {
               Navigator.of(context).pushReplacementNamed(LoginPage.routeName);
             });
-            return const SizedBox
-                .shrink(); // No mostrar nada mientras se redirige
+            return const SizedBox.shrink();
           }
 
           // Si el documento existe, redirigir a la página de inicio
@@ -147,5 +142,9 @@ class AuthWrapper extends StatelessWidget {
         },
       );
     }
+  }
+
+  Future<DocumentSnapshot> _obtenerDocumentoEmpleado(String uid) {
+    return FirebaseFirestore.instance.collection('empleados').doc(uid).get();
   }
 }

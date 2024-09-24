@@ -5,34 +5,71 @@ import 'package:provider/provider.dart';
 import 'package:tcp/pages/Mapa/provider.dart';
 import 'package:tcp/pages/Mapa/ubicacionActual.dart';
 import 'package:tcp/widgets/widgets.dart';
-import 'package:geolocator/geolocator.dart'; // Importa Geolocator
 
 class MapPage extends StatefulWidget {
   static String routeName = '/mapa';
   const MapPage({super.key});
 
   @override
-  _MapPageState createState() => _MapPageState();
+  _EstadoPaginaMapa createState() => _EstadoPaginaMapa();
 }
 
-class _MapPageState extends State<MapPage> {
-  late GoogleMapController controladorMapa; // Controlador del mapa
-  LatLng? _ubicacionActual; // Variable para almacenar la ubicación actual
+class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
+  late GoogleMapController controladorMapa;
+  final LatLng _centro = const LatLng(23.256177357367125, -106.41026703151338);
+  late BuildContext _contexto;
+  final Estilos2 _estilos = Estilos2();
+  ProveedorUsuario? _proveedorUsuario;
 
-  final LatLng _centro = const LatLng(
-      23.256177357367125, -106.41026703151338); // Ubicación central inicial
-
-  // Método que se llama cuando el mapa se ha creado
-  void _onMapCreated(GoogleMapController controlador) {
-    controladorMapa = controlador;
-    // Se encuentra en el archivo "ubicacionActual"
-    obtenerUbicacionActual(controlador); // Llama al método desde el helper
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _contexto = context;
+    _proveedorUsuario = Provider.of<ProveedorUsuario>(context, listen: false);
   }
 
-  // Método para construir el contenido del BottomSheet
-  Widget _vistaHojaInferior(BuildContext context) {
-    final proveedorUsuario = Provider.of<ProveedorUsuario>(context);
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _proveedorUsuario?.actualizarStatus(true);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _proveedorUsuario?.nombreUsuario;
+    });
+  }
 
+  @override
+  void dispose() {
+    _proveedorUsuario?.actualizarStatus(false);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState estado) {
+    if (_proveedorUsuario == null) return;
+    switch (estado) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _proveedorUsuario?.actualizarStatus(false);
+        break;
+      case AppLifecycleState.resumed:
+        _proveedorUsuario?.actualizarStatus(true);
+        break;
+      case AppLifecycleState.hidden:
+        break;
+    }
+  }
+
+  void _alCrearMapa(GoogleMapController controlador) {
+    controladorMapa = controlador;
+    obtenerUbicacionActual(controlador);
+  }
+
+  Widget _construirHojaInferiorUsuario(BuildContext contexto) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -46,220 +83,250 @@ class _MapPageState extends State<MapPage> {
                 onPressed: () {},
               ),
               Text(
-                proveedorUsuario.cargando
-                    ? 'Cargando...'
-                    : 'Bienvenido ${proveedorUsuario.nombreUsuario}', // Mensaje de bienvenida
+                'Bienvenido, ${Provider.of<ProveedorUsuario>(contexto).nombreUsuario}',
                 style:
                     const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.maxFinite,
-            child: Estilos()._botonIniciarRuta(), // Botón para iniciar la ruta
-          ),
+          _construirBotonIniciarRuta(contexto),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                  child: Estilos().botonEstado(context)), // Botón de estado
-              const SizedBox(width: 8),
-              Expanded(
-                  child:
-                      Estilos().botonCerrarSesion()), // Botón de cerrar sesión
-            ],
-          ),
+          _construirFilaEstado(contexto),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.maxFinite,
-            child: Estilos().rutaSeleccionada(
-                context), // Información de la ruta seleccionada
-          ),
+          _construirBotonRutaDeHoy(contexto),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
+  Widget _construirBotonIniciarRuta(BuildContext contexto) {
+    return SizedBox(
+      width: double.infinity,
+      child: _estilos.botonIniciarRuta(
+        context: contexto,
+        texto: 'Iniciar la ruta',
+        accion: () {
+          print("Ruta iniciada");
+          // Lógica para iniciar la ruta
+        },
+        colorFondo: Colors.green,
+        colorTexto: Colors.white,
+      ),
+    );
+  }
+
+  Widget _construirFilaEstado(BuildContext contexto) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        SizedBox(
-          width: MediaQuery.of(context).size.width,
-          height: MediaQuery.of(context).size.height,
-          child: GoogleMap(
-            onMapCreated: _onMapCreated, // Método que se llama al crear el mapa
-            initialCameraPosition: CameraPosition(
-              target: _centro, // Posición inicial de la cámara
-              zoom: 11.0, // Nivel de zoom inicial
-            ),
-            zoomControlsEnabled: false,
-            myLocationEnabled: true, // Habilita el botón de mi ubicación
+        Expanded(
+          child: _estilos.botonSubtitulos(
+            context: contexto,
+            titulo: 'Estado',
+            subtitulo: '-',
+            colorFondo: Colors.greenAccent.shade100,
+            colorBorde: Colors.green,
+            colorTextoTitulo: Colors.green,
+            colorTextoSubtitulo: Colors.black54,
+            esClickeable: false,
+            onTap: () {
+              print("Botón clickeado");
+            },
           ),
         ),
-        Align(
-          alignment: Alignment.bottomRight,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 20.0, right: 20.0),
-            child: FloatingActionButton(
-              onPressed: () {
-                // Mostrar el BottomSheet al presionar el botón
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled:
-                      true, // Permite que el BottomSheet ocupe más espacio
-                  shape: const RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (BuildContext context) {
-                    return _vistaHojaInferior(context);
-                  },
-                );
-              },
-              backgroundColor: colorPrincipal, // Color del botón
-              heroTag: "config",
-              child: const FaIcon(
-                FontAwesomeIcons.bus,
-                color: Colors.white,
-              ),
-            ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _estilos.botonCustom(
+            context: contexto,
+            texto: "Cerrar Sesión",
+            icono: Icons.logout,
+            colorFondo: Colors.red.shade50,
+            colorBorde: Colors.red,
+            colorTexto: Colors.red,
+            esClickeable: true,
+            accion: () {
+              Provider.of<ProveedorUsuario>(_contexto, listen: false)
+                  .cerrarSesion(contexto);
+            },
           ),
         ),
       ],
     );
   }
-}
 
-// Definición de la clase Estilos
-class Estilos {
-  Widget _contenedorBoton(Color colorFondo, Color colorBorde, String titulo,
-      String subtitulo, Color colorTexto) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorFondo,
-        border: Border.all(color: colorBorde, width: 2),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: colorBorde.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+  Widget _construirBotonRutaDeHoy(BuildContext contexto) {
+    return SizedBox(
+      width: double.infinity,
+      child: _estilos.botonSubtitulos(
+        context: contexto,
+        titulo: 'Ruta de hoy:',
+        subtitulo: '-',
+        colorFondo: Colors.lightBlue.shade50,
+        colorBorde: Colors.blue,
+        colorTextoTitulo: Colors.blue,
+        colorTextoSubtitulo: Colors.black54,
+        esClickeable: true,
+        onTap: () {
+          print("Botón clickeado");
+        },
       ),
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 36),
+    );
+  }
+
+  Widget _construirHojaInferiorAdmin(BuildContext contexto) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            titulo,
-            style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold, color: colorTexto),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(FontAwesomeIcons.eye, color: Colors.red),
+                onPressed: () {},
+              ),
+              Text(
+                'Admin: ${Provider.of<ProveedorUsuario>(contexto).nombreUsuario}',
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(subtitulo, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 16),
+          _construirAccionesAdmin(contexto),
         ],
       ),
     );
   }
 
-  Widget _botonIniciarRuta() {
-    return ElevatedButton(
-      onPressed: () {
-        // Lógica para iniciar la ruta
-      },
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: colorPrincipal, // Color del botón
-        elevation: 5,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+  Widget _construirAccionesAdmin(BuildContext contexto) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _construirBotonAccionAdmin(
+          contexto,
+          texto: 'Asignar ruta',
+          icono: FontAwesomeIcons.route,
+          colorFondo: Colors.orange.shade50,
+          colorBorde: Colors.orange,
+          onTap: () {
+            print("Página de Asignar rutas");
+          },
         ),
-        padding: const EdgeInsets.symmetric(vertical: 15),
-      ),
-      child: const Text(
-        'Iniciar la ruta',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
+        const SizedBox(height: 20),
+        _construirBotonAccionAdmin(
+          contexto,
+          texto: 'Agregar Chofer',
+          icono: FontAwesomeIcons.personCircleCheck,
+          colorFondo: Colors.blue.shade50,
+          colorBorde: Colors.blue,
+          onTap: () {
+            Navigator.of(context).pushReplacementNamed('/registro');
+          },
+        ),
+        const SizedBox(height: 20),
+        _construirBotonAccionAdmin(
+          contexto,
+          texto: 'Eliminar Choffer',
+          icono: FontAwesomeIcons.trash,
+          colorFondo: Colors.red.shade50,
+          colorBorde: Colors.redAccent,
+          onTap: () {
+            print("Página de Asignar rutas");
+          },
+        ),
+        const SizedBox(height: 20),
+        _construirBotonAccionAdmin(
+          contexto,
+          texto: 'Cerrar Sesión',
+          icono: FontAwesomeIcons.rightFromBracket,
+          colorFondo: Colors.red.shade50,
+          colorBorde: Colors.red,
+          onTap: () {
+            Provider.of<ProveedorUsuario>(contexto, listen: false)
+                .cerrarSesion(contexto);
+          },
+        ),
+      ],
     );
   }
 
-  Widget botonEstado(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('¿Está seguro?',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              content: const Text('¿Quiere cerrar sesión?',
-                  style: TextStyle(fontSize: 16)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Sí',
-                      style: TextStyle(
-                          color: Colors.blue, fontWeight: FontWeight.bold)),
+  Widget _construirBotonAccionAdmin(
+    BuildContext contexto, {
+    required String texto,
+    required IconData icono,
+    required Color colorFondo,
+    required Color colorBorde,
+    required Function onTap,
+  }) {
+    return _estilos.botonCustom(
+      context: contexto,
+      texto: texto,
+      icono: icono,
+      colorFondo: colorFondo,
+      colorBorde: colorBorde,
+      colorTexto: colorBorde, // Usamos el color del borde para el texto
+      esClickeable: true,
+      accion: () => onTap(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ProveedorUsuario>(
+      builder: (context, proveedorUsuario, child) {
+        return Stack(
+          children: [
+            SizedBox(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              child: GoogleMap(
+                onMapCreated: _alCrearMapa,
+                initialCameraPosition: CameraPosition(
+                  target: _centro,
+                  zoom: 15.0,
                 ),
-              ],
-            );
-          },
+                zoomControlsEnabled: false,
+                myLocationEnabled: true,
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20.0, right: 20.0),
+                child: FloatingActionButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: false,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (BuildContext context) {
+                        return proveedorUsuario.esAdmin
+                            ? _construirHojaInferiorAdmin(context)
+                            : _construirHojaInferiorUsuario(context);
+                      },
+                    );
+                  },
+                  backgroundColor:
+                      proveedorUsuario.esAdmin ? Colors.red : colorPrincipal,
+                  heroTag: proveedorUsuario.esAdmin ? "admin" : "config",
+                  child: Icon(
+                    proveedorUsuario.esAdmin
+                        ? FontAwesomeIcons.key
+                        : FontAwesomeIcons.bus,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
-      child: _contenedorBoton(
-        Colors.blue.shade50,
-        Colors.blue,
-        'Cerrar Sesión:',
-        '2 años',
-        Colors.blue,
-      ),
-    );
-  }
-
-  Widget botonCerrarSesion() {
-    return _contenedorBoton(
-      Colors.red.shade50,
-      Colors.red,
-      'Estado:',
-      'Activo',
-      Colors.red,
-    );
-  }
-
-  Widget rutaSeleccionada(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        border: Border.all(color: Colors.green, width: 2),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 36),
-      child: Column(
-        children: const [
-          Text(
-            'Ruta Seleccionada:',
-            style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-          ),
-          SizedBox(height: 4),
-          Text('Prados del Sol', style: TextStyle(fontSize: 16)),
-        ],
-      ),
     );
   }
 }

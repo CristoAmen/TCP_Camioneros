@@ -1,46 +1,40 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:tcp/pages/Login_Page.dart';
 
 class ProveedorUsuario with ChangeNotifier {
-  // Variables privadas para almacenar los datos del usuario y su estado
-  String _nombreUsuario = ''; // Almacena el nombre completo del usuario
-  String _rolUsuario = ''; // Almacena el rol del usuario (ej. admin, usuario)
-  bool _cargando = false; // Indica si se está cargando la información
-  bool _esAdmin = false; // Indica si el usuario es administrador
-  String _correoAutenticado =
-      ''; // Almacena el correo electrónico del usuario autenticado
+  String _nombreUsuario = '';
+  String _rolUsuario = '';
+  bool _cargando = false;
+  bool _esAdmin = false;
+  String _correoAutenticado = '';
+  bool activos = false;
 
-  // Getters para acceder a las variables de manera externa
   String get nombreUsuario => _nombreUsuario;
   String get rolUsuario => _rolUsuario;
   bool get cargando => _cargando;
   bool get esAdmin => _esAdmin;
   String get correoAutenticado => _correoAutenticado;
 
-  final FirebaseAuth _autenticacion =
-      FirebaseAuth.instance; // Instancia de FirebaseAuth
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance; // Instancia de Firestore
+  final FirebaseAuth _autenticacion = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Función para obtener los datos del usuario autenticado
   Future<void> obtenerDatosUsuario() async {
     try {
-      _cargando = true; // Indicar que se está cargando la información
-      notifyListeners(); // Notificar a los widgets que el estado ha cambiado
+      _cargando = true;
+      notifyListeners();
 
-      User? usuario =
-          _autenticacion.currentUser; // Obtener el usuario autenticado
+      User? usuario = _autenticacion.currentUser;
       if (usuario != null) {
-        // Consultar los datos del usuario desde Firestore
         DocumentSnapshot<Map<String, dynamic>> datosUsuario =
             await _firestore.collection('empleados').doc(usuario.uid).get();
 
-        // Verificar si el documento existe
         if (datosUsuario.exists) {
-          // Asignar los datos obtenidos
           _nombreUsuario = datosUsuario.data()?['nombres'] ?? '';
           _rolUsuario = datosUsuario.data()?['rol'] ?? '';
+          _esAdmin = _rolUsuario == 'admin';
+          _correoAutenticado = usuario.email ?? '';
         } else {
           print("Documento no encontrado.");
         }
@@ -50,34 +44,30 @@ class ProveedorUsuario with ChangeNotifier {
     } catch (e) {
       print("Error al obtener el usuario: $e");
     } finally {
-      _cargando = false; // Indicar que la carga ha terminado
-      notifyListeners(); // Notificar a los widgets cuando la operación finaliza
+      _cargando = false;
+      notifyListeners();
     }
   }
 
-  // Función para obtener y concatenar el nombre completo del usuario
   Future<void> obtenerNombreCompleto() async {
     try {
       User? usuarioActual = _autenticacion.currentUser;
 
       if (usuarioActual != null) {
-        // Guardar el correo electrónico del usuario autenticado
         _correoAutenticado = usuarioActual.email ?? '';
 
-        // Consultar los datos del usuario desde Firestore
         DocumentSnapshot documento = await _firestore
             .collection('empleados')
             .doc(usuarioActual.uid)
             .get();
 
         if (documento.exists) {
-          // Obtener nombres y apellidos y concatenarlos
           String nombres = documento.get('nombres');
           String apellidoMaterno = documento.get('materno');
           String apellidoPaterno = documento.get('paterno');
 
-          _nombreUsuario = '$nombres $apellidoMaterno $apellidoPaterno';
-          notifyListeners(); // Notificar a los widgets que el estado ha cambiado
+          _nombreUsuario = '$nombres';
+          notifyListeners();
         }
       }
     } catch (error) {
@@ -85,24 +75,86 @@ class ProveedorUsuario with ChangeNotifier {
     }
   }
 
-  // Función para verificar si el usuario es administrador
-  Future<void> verificarRolUsuario() async {
+  Future<void> checarRol() async {
     try {
       User? usuario = _autenticacion.currentUser;
       if (usuario != null) {
-        // Consultar el rol del usuario desde Firestore
         DocumentSnapshot datosUsuario =
             await _firestore.collection('choffer').doc(usuario.uid).get();
         if (datosUsuario.exists) {
-          // Verificar si el rol es 'admin'
-          _esAdmin = datosUsuario['rol'] == 'admin';
-          notifyListeners(); // Notificar a los widgets que el estado ha cambiado
+          _rolUsuario = datosUsuario['rol'] ?? '';
+          _esAdmin = _rolUsuario == 'admin';
+          notifyListeners();
         }
       }
     } catch (e) {
-      print('Error al obtener información del usuario: $e');
+      print('Error al verificar el rol del usuario: $e');
     }
   }
 
-  // Otras funciones relacionadas con la lógica de usuario pueden ir aquí
+  Future<void> inicializarDatosUsuario() async {
+    _cargando = true;
+    notifyListeners();
+
+    await obtenerDatosUsuario();
+    await obtenerNombreCompleto();
+    await checarRol();
+
+    _cargando = false;
+    notifyListeners();
+  }
+
+// Método para cerrar sesión
+  Future<void> cerrarSesion(BuildContext context) async {
+    try {
+      _cargando = true;
+      notifyListeners();
+
+      // Cambia el estado de actividad del usuario a inactivo (si es necesario)
+      await _firestore
+          .collection('empleados')
+          .doc(_autenticacion.currentUser?.uid)
+          .update({'activo': false});
+
+      // Cierra sesión de Firebase Auth
+      await _autenticacion.signOut();
+
+      // Limpia los datos del usuario en la aplicación
+      _nombreUsuario = '';
+      _rolUsuario = '';
+      _correoAutenticado = '';
+      _esAdmin = false;
+
+      // Navegar a la página de login y eliminar el historial de navegación
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+            builder: (context) =>
+                LoginPage()), // Asegúrate de que LoginPage sea el widget correcto
+        (Route<dynamic> route) => false, // Elimina todas las rutas anteriores
+      );
+    } catch (e) {
+      print('Error al cerrar sesión: $e');
+    } finally {
+      _cargando = false;
+      notifyListeners();
+    }
+  }
+
+  // Aquí muevo la función ActualizarStatus al provider
+  Future<void> actualizarStatus(bool activo) async {
+    try {
+      User? user = _autenticacion.currentUser;
+      if (user != null) {
+        await _firestore.collection('empleados').doc(user.uid).update({
+          'activo': activo,
+        });
+
+        // Actualiza el estado local después de la actualización en Firestore
+        activos = activo;
+        notifyListeners(); // Notifica a los widgets que consumen este estado
+      }
+    } catch (e) {
+      print('Error al actualizar el estado del usuario: $e');
+    }
+  }
 }
