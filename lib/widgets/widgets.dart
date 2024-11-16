@@ -767,6 +767,7 @@ class PasswordField extends StatelessWidget {
   final TextEditingController controller;
 
   const PasswordField({
+    super.key,
     required this.isPasswordObscure,
     required this.onVisibilityChanged,
     required this.controller,

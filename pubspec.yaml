@@ -33,6 +33,7 @@ dependencies:
   # Permisos
   permission_handler: ^11.3.1
   # UI y Navegación
+  wolt_modal_sheet: ^0.9.3
   font_awesome_flutter: ^10.7.0
   cupertino_icons: ^1.0.6
   panara_dialogs: ^0.1.5  

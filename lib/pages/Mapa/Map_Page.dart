@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:tcp/pages/Mapa/Admin/asignarRuta.dart';
+import 'package:tcp/pages/Mapa/Admin/eliminarCamionero.dart';
 import 'package:tcp/pages/Mapa/provider.dart';
 import 'package:tcp/pages/Mapa/ubicacionActual.dart';
+import 'package:tcp/pages/Register_Page.dart';
 import 'package:tcp/widgets/widgets.dart';
+import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 class MapPage extends StatefulWidget {
   static String routeName = '/mapa';
@@ -19,6 +23,9 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
   final LatLng _centro = const LatLng(23.256177357367125, -106.41026703151338);
   late BuildContext _contexto;
   final Estilos2 _estilos = Estilos2();
+  // Llamamos a la clase con esta variable
+  final deleteCamion _delete = deleteCamion(); // Eliminar Camionero
+  final asignarRuta _asignar = asignarRuta(); // Asignar ruta
   ProveedorUsuario? _proveedorUsuario;
 
   @override
@@ -108,7 +115,8 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
         texto: 'Iniciar la ruta',
         accion: () {
           print("Ruta iniciada");
-          // Lógica para iniciar la ruta
+          // Lo primero que quiero que haga es que sea visible la ubicacion y se ha visible en la base de datos de firebase
+          // pero que se actualize periodicamente. Siempre y cuando tenga una ruta ya asignada si no lo tiene no tendra habilitado esta opcion
         },
         colorFondo: Colors.green,
         colorTexto: Colors.white,
@@ -174,7 +182,7 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _construirHojaInferiorAdmin(BuildContext contexto) {
+  Widget _construirHojaInferiorAdmin(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -188,65 +196,60 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
                 onPressed: () {},
               ),
               Text(
-                'Admin: ${Provider.of<ProveedorUsuario>(contexto).nombreUsuario}',
+                'Admin: ${Provider.of<ProveedorUsuario>(context).nombreUsuario}',
                 style:
                     const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _construirAccionesAdmin(contexto),
+          _construirAccionesAdmin(context),
         ],
       ),
     );
   }
 
-  Widget _construirAccionesAdmin(BuildContext contexto) {
+  Widget _construirAccionesAdmin(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _construirBotonAccionAdmin(
-          contexto,
-          texto: 'Asignar ruta',
+          context,
+          texto: 'Asignar Ruta',
           icono: FontAwesomeIcons.route,
           colorFondo: Colors.orange.shade50,
           colorBorde: Colors.orange,
-          onTap: () {
-            print("Página de Asignar rutas");
-          },
+          onTap: () => _asignar.irAsignarRuta(context),
         ),
         const SizedBox(height: 20),
         _construirBotonAccionAdmin(
-          contexto,
-          texto: 'Agregar Chofer',
+          context,
+          texto: 'Agregar Camionero',
           icono: FontAwesomeIcons.personCircleCheck,
           colorFondo: Colors.blue.shade50,
           colorBorde: Colors.blue,
-          onTap: () {
-            Navigator.of(context).pushReplacementNamed('/registro');
-          },
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const RegisterPage())),
         ),
         const SizedBox(height: 20),
         _construirBotonAccionAdmin(
-          contexto,
-          texto: 'Eliminar Choffer',
+          context,
+          texto: 'Borrar Camionero',
           icono: FontAwesomeIcons.trash,
           colorFondo: Colors.red.shade50,
           colorBorde: Colors.redAccent,
-          onTap: () {
-            print("Página de Asignar rutas");
-          },
+          onTap: () => _delete.borrarCamionero(context),
         ),
         const SizedBox(height: 20),
         _construirBotonAccionAdmin(
-          contexto,
-          texto: 'Cerrar Sesión',
+          context,
+          texto: 'Cerrar Sesion',
           icono: FontAwesomeIcons.rightFromBracket,
           colorFondo: Colors.red.shade50,
           colorBorde: Colors.red,
           onTap: () {
-            Provider.of<ProveedorUsuario>(contexto, listen: false)
-                .cerrarSesion(contexto);
+            Provider.of<ProveedorUsuario>(context, listen: false)
+                .cerrarSesion(context);
           },
         ),
       ],

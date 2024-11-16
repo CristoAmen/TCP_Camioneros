@@ -63,10 +63,10 @@ class ProveedorUsuario with ChangeNotifier {
 
         if (documento.exists) {
           String nombres = documento.get('nombres');
-          String apellidoMaterno = documento.get('materno');
-          String apellidoPaterno = documento.get('paterno');
+          // String apellidoMaterno = documento.get('materno');
+          // String apellidoPaterno = documento.get('paterno');
 
-          _nombreUsuario = '$nombres';
+          _nombreUsuario = nombres;
           notifyListeners();
         }
       }
@@ -129,7 +129,7 @@ class ProveedorUsuario with ChangeNotifier {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
             builder: (context) =>
-                LoginPage()), // Asegúrate de que LoginPage sea el widget correcto
+                const LoginPage()), // Asegúrate de que LoginPage sea el widget correcto
         (Route<dynamic> route) => false, // Elimina todas las rutas anteriores
       );
     } catch (e) {
