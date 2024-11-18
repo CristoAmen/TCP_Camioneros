@@ -8,8 +8,9 @@ import 'package:tcp/config/Metodos_Firebase.dart';
 import 'package:tcp/config/firebase_options.dart';
 import 'package:tcp/pages/Home_Page.dart';
 import 'package:tcp/pages/Login_Page.dart';
+import 'package:tcp/pages/Mapa/Admin/asignarRuta.dart';
 import 'package:tcp/pages/Mapa/Map_Page.dart';
-import 'package:tcp/pages/Mapa/provider.dart';
+import 'package:tcp/provider/provider.dart';
 import 'package:tcp/pages/Perfil_Page.dart';
 import 'package:tcp/pages/Register_Page.dart';
 import 'package:tcp/pages/splash_screen.dart';
@@ -96,6 +97,7 @@ class MyApp extends StatelessWidget {
           HomePage.routeName: (context) => const HomePage(),
           PerfilPage.routeName: (context) => const PerfilPage(),
           MapPage.routeName: (context) => const MapPage(),
+          AsignarRutaPage.routeName: (context) => AsignarRutaPage(),
         },
       ),
     );

@@ -1,10 +1,14 @@
+import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:tcp/pages/Mapa/Admin/asignarRuta.dart';
 import 'package:tcp/pages/Mapa/Admin/eliminarCamionero.dart';
-import 'package:tcp/pages/Mapa/provider.dart';
+import 'package:tcp/pages/Mapa/Trazado.dart';
+import 'package:tcp/provider/provider.dart';
 import 'package:tcp/pages/Mapa/ubicacionActual.dart';
 import 'package:tcp/pages/Register_Page.dart';
 import 'package:tcp/widgets/widgets.dart';
@@ -25,8 +29,14 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
   final Estilos2 _estilos = Estilos2();
   // Llamamos a la clase con esta variable
   final deleteCamion _delete = deleteCamion(); // Eliminar Camionero
-  final asignarRuta _asignar = asignarRuta(); // Asignar ruta
   ProveedorUsuario? _proveedorUsuario;
+
+  List<LatLng> _coordenadasKml = []; // Nueva variable
+  bool _mostrarRutaKml = false; // Nueva variable
+  bool mostrarBotonIzquierdo = false; // Nueva variable
+  bool _mostrarTrafico = false; // Nueva variable
+
+  List<Polyline> _polylines = [];
 
   @override
   void didChangeDependencies() {
@@ -107,6 +117,32 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
+  void _actualizarPosicionCamara({bool resetZoom = false}) {
+    if (_coordenadasKml.isNotEmpty && controladorMapa != null) {
+      // Calcular límites de las coordenadas
+      double minLat = _coordenadasKml.first.latitude;
+      double maxLat = _coordenadasKml.first.latitude;
+      double minLng = _coordenadasKml.first.longitude;
+      double maxLng = _coordenadasKml.first.longitude;
+
+      for (LatLng coord in _coordenadasKml) {
+        minLat = min(minLat, coord.latitude);
+        maxLat = max(maxLat, coord.latitude);
+        minLng = min(minLng, coord.longitude);
+        maxLng = max(maxLng, coord.longitude);
+      }
+
+      // Crear bounds
+      LatLngBounds bounds = LatLngBounds(
+          southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng));
+
+      // Ajustar cámara
+      controladorMapa
+          .animateCamera(CameraUpdate.newLatLngBounds(bounds, 50 // Padding
+              ));
+    }
+  }
+
   Widget _construirBotonIniciarRuta(BuildContext contexto) {
     return SizedBox(
       width: double.infinity,
@@ -114,14 +150,59 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
         context: contexto,
         texto: 'Iniciar la ruta',
         accion: () {
-          print("Ruta iniciada");
-          // Lo primero que quiero que haga es que sea visible la ubicacion y se ha visible en la base de datos de firebase
-          // pero que se actualize periodicamente. Siempre y cuando tenga una ruta ya asignada si no lo tiene no tendra habilitado esta opcion
+          // Agregaremos la propiedad de status (booleano) y ubicacion () compartira la ubicacion cada cierto tiempo en firebase (15 segundos)
+
+          // Mostrara la ruta del camion
+          final proveedorUsuario =
+              Provider.of<ProveedorUsuario>(contexto, listen: false);
+
+          FirebaseFirestore.instance
+              .collection('empleados')
+              .doc(proveedorUsuario.id)
+              .get()
+              .then((snapshot) {
+            String rutaAsignada = snapshot.data()?['rutaAsignada'] ?? '';
+
+            if (rutaAsignada.isNotEmpty) {
+              _cargarYMostrarRutaKml('lib/src/kml/${rutaAsignada}.kml');
+            } else {
+              ScaffoldMessenger.of(contexto).showSnackBar(
+                  SnackBar(content: Text('No tiene una ruta asignada')));
+            }
+          });
         },
         colorFondo: Colors.green,
         colorTexto: Colors.white,
       ),
     );
+  }
+
+  Future<void> _cargarYMostrarRutaKml(String rutaKml) async {
+    List<LatLng> coordenadasKml = [];
+    await TrazarLinea().cargarRutaKml(coordenadasKml, rutaKml);
+
+    if (mounted) {
+      setState(() {
+        _coordenadasKml = coordenadasKml;
+        _mostrarRutaKml = true;
+        mostrarBotonIzquierdo = true;
+        _mostrarTrafico = true;
+
+        // Crear la polilínea con las coordenadas KML y agregarla a la lista
+        Polyline polilinea = Polyline(
+          polylineId: PolylineId('ruta_kml'),
+          points: _coordenadasKml,
+          color: Colors.blue, // Puedes cambiar el color si lo deseas
+          width: 5,
+        );
+
+        // Añadir la polilínea a la lista de polilíneas
+        _polylines.add(polilinea);
+      });
+
+      // Actualizar la posición de la cámara
+      _actualizarPosicionCamara(resetZoom: true);
+    }
   }
 
   Widget _construirFilaEstado(BuildContext contexto) {
@@ -164,21 +245,45 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
   }
 
   Widget _construirBotonRutaDeHoy(BuildContext contexto) {
-    return SizedBox(
-      width: double.infinity,
-      child: _estilos.botonSubtitulos(
-        context: contexto,
-        titulo: 'Ruta de hoy:',
-        subtitulo: '-',
-        colorFondo: Colors.lightBlue.shade50,
-        colorBorde: Colors.blue,
-        colorTextoTitulo: Colors.blue,
-        colorTextoSubtitulo: Colors.black54,
-        esClickeable: true,
-        onTap: () {
-          print("Botón clickeado");
-        },
-      ),
+    final proveedorUsuario =
+        Provider.of<ProveedorUsuario>(contexto, listen: false);
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('empleados')
+          .doc(proveedorUsuario.id) // Ahora usará el getter para obtener el UID
+          .get(),
+      builder:
+          (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+        String subtitulo = 'Cargando...';
+
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasData && snapshot.data!.exists) {
+            subtitulo = snapshot.data!['rutaAsignada'] ?? 'Sin asignar';
+          } else {
+            subtitulo = 'Sin datos';
+          }
+        } else if (snapshot.hasError) {
+          subtitulo = 'Error al cargar';
+        }
+
+        return SizedBox(
+          width: double.infinity,
+          child: _estilos.botonSubtitulos(
+            context: contexto,
+            titulo: 'Ruta de hoy:',
+            subtitulo: subtitulo,
+            colorFondo: Colors.lightBlue.shade50,
+            colorBorde: Colors.blue,
+            colorTextoTitulo: Colors.blue,
+            colorTextoSubtitulo: Colors.black54,
+            esClickeable: true,
+            onTap: () {
+              print("Botón clickeado");
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -219,7 +324,8 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
           icono: FontAwesomeIcons.route,
           colorFondo: Colors.orange.shade50,
           colorBorde: Colors.orange,
-          onTap: () => _asignar.irAsignarRuta(context),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => AsignarRutaPage())),
         ),
         const SizedBox(height: 20),
         _construirBotonAccionAdmin(
@@ -293,6 +399,7 @@ class _EstadoPaginaMapa extends State<MapPage> with WidgetsBindingObserver {
                 ),
                 zoomControlsEnabled: false,
                 myLocationEnabled: true,
+                polylines: Set<Polyline>.of(_polylines),
               ),
             ),
             Align(

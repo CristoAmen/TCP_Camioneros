@@ -10,6 +10,7 @@ class ProveedorUsuario with ChangeNotifier {
   bool _esAdmin = false;
   String _correoAutenticado = '';
   bool activos = false;
+  String get id => _autenticacion.currentUser?.uid ?? '';
 
   String get nombreUsuario => _nombreUsuario;
   String get rolUsuario => _rolUsuario;
